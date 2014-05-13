@@ -35,6 +35,7 @@ import boto.exception
 
 S4CMD_VERSION = "1.5.17"
 
+UPLOADED_CANNED_ACL = 'bucket-owner-full-control'
 SINGLEPART_UPLOAD_MAX = 4500 * 1024 * 1024 # Max file size to upload without S3 multipart upload
 SINGLEPART_DOWNLOAD_MAX = 50 * 1024 * 1024 # Max file size to download with single thread
 DEFAULT_SPLIT = 50 * 1024 * 1024
@@ -993,7 +994,7 @@ class ThreadUtil(S3Handler, ThreadPool.Worker):
         key = boto.s3.key.Key(bucket)
         key.key = s3url.path
         key.set_metadata('privilege',  self.get_file_privilege(source))
-        key.set_contents_from_filename(source)
+        key.set_contents_from_filename(source, policy=UPLOADED_CANNED_ACL)
         message('%s => %s', source, target)
         return
 
@@ -1026,6 +1027,8 @@ class ThreadUtil(S3Handler, ThreadPool.Worker):
     if mpi.complete():
       try:
         mpu.complete_upload()
+        key = bucket.get_key(s3url.path)
+        key.set_acl(UPLOADED_CANNED_ACL)
         message('%s => %s', source, target)
       except Exception, e:
         mpu.cancel_upload()
